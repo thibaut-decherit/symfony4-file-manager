@@ -1,0 +1,81 @@
+imports:
+  - resource: response_header_setter/response_headers.yaml
+  - resource: response_header_setter/content_security_policy.yaml
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+  app.account_deletion_token_lifetime: 3600 # seconds
+
+  # Tweak these two values according to server hardware. It is recommended that server response doesn't take more than
+  # 1 second during "normal" login.
+  # Feel free to ignore the 1 second limit for important passwords (e.g. admin account), you would then have to create a
+  # dedicated encoder for admin users, with higher values for these two settings.
+  # See https://symfony.com/doc/current/security/named_encoders.html
+  # Bear in mind that login will take longer if OnAuthPasswordRehashIfAutoEncoderSettingsChange is triggered and has to rehash the
+  # password. This situation should therefore not be considered as a "normal" login and could take more than 1 second.
+  app.argon2id_memory_cost: 128000 # Default is 65536
+  app.argon2id_time_cost: 10 # Default is 4
+
+  app.email_change_request_send_email_again_delay: 120 # seconds
+  app.email_change_token_lifetime: 3600 # seconds
+  app.password_reset_request_send_email_again_delay: 120 # seconds
+  app.password_reset_token_lifetime: 3600 # seconds
+  app.website_name: '%env(WEBSITE_NAME)%'
+
+services:
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    public: false # Allows optimizing the container by removing unused services; this also means
+                  # fetching services directly from the container via $container->get() won't work.
+                  # The best practice is to be explicit about your dependencies anyway.
+
+  # makes classes in src/ available to be used as services
+  # this creates a service per class whose id is the fully-qualified class name
+  App\:
+    resource: '../src/*'
+    exclude: '../src/{DependencyInjection,Entity,Migrations,Model,Tests,Kernel.php}'
+
+  # controllers are imported separately to make sure services can be injected
+  # as action arguments even if you don't extend any base controller class
+  App\Controller\:
+    resource: '../src/Controller'
+    tags: ['controller.service_arguments']
+
+  # add more service definitions when explicit configuration is needed
+  # please note that last definitions always *replace* previous ones
+
+  App\Service\MailerService:
+    arguments:
+      $mailerAddress: '%env(MAILER_SENDER)%'
+      $replyToAddress: '%env(MAILER_REPLY_TO)%'
+      $websiteName: '%app.website_name%'
+
+  App\EventListener\RedirectIfAuthenticated:
+    tags:
+      - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest }
+
+  App\EventListener\ResponseHeaderSetter\ResponseHeaderSetter:
+    arguments:
+      $kernelEnvironment: '%kernel.environment%'
+      $simpleHeaders: '%app.response_headers%'
+      $requestStack: '@request_stack'
+      $cspConfig: '%app.content_security_policy%'
+    tags:
+      - { name: kernel.event_listener, event: kernel.response, method: onKernelResponse }
+
+  App\EventListener\OnAuthPasswordRehashIfAutoEncoderSettingsChange:
+    arguments:
+      $memoryCost: '%app.argon2id_memory_cost%'
+      $timeCost: '%app.argon2id_time_cost%'
+    tags:
+      - { name: kernel.event_listener, event: security.interactive_login }
+
+  App\Security\AccountDeletionLogoutHandler:
+    arguments:
+      $sessionLogoutHandler: '@security.logout.handler.session'

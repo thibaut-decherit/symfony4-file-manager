@@ -1,0 +1,4 @@
+swiftmailer:
+  spool: # See https://symfony.com/doc/current/email.html#spool-using-files
+    type: 'file'
+    path: '%kernel.project_dir%/var/spool'

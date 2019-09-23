@@ -1,0 +1,51 @@
+{% extends '_base.html.twig' %}
+
+{% block body %}
+    <h1>{{ website_name }}</h1>
+
+    {% include 'flash_alert/_alert.html.twig' with {
+        'alert_type': 'email-change-error',
+        'alert_style': 'danger',
+        'text_align': 'center'
+    } %}
+    {% include 'flash_alert/_alert.html.twig' with {
+        'raw_message': true,
+        'alert_type': 'email-change-success-raw',
+        'alert_style': 'success',
+        'text_align': 'center'
+    } %}
+    {% include 'flash_alert/_alert.html.twig' with {
+        'raw_message': true,
+        'alert_type': 'account-deletion-request-success-raw',
+        'alert_style': 'success',
+        'text_align': 'center'
+    } %}
+    {% include 'flash_alert/_alert.html.twig' with {
+        'alert_type': 'account-deletion-success',
+        'alert_style': 'success',
+        'text_align': 'center'
+    } %}
+    {% include 'flash_alert/_alert.html.twig' with {
+        'alert_type': 'account-deletion-error',
+        'alert_style': 'danger',
+        'text_align': 'center'
+    } %}
+
+    {% if is_granted("ROLE_USER") %}
+        <div class="d-flex">
+            <p class="my-2 mr-2">{{ 'flash.user.greeting_authenticated'|trans }} {{ app.user.username }}</p>
+            <a href="{{ path('account') }}" class="my-2 mr-2">{{ 'page_title.my_account'|trans }}</a>
+            {% include 'form/user/button/_logout.html.twig' %}
+        </div>
+    {% else %}
+        <p class="my-2">{{ 'flash.user.greeting_anonymous'|trans }}</p>
+    {% endif %}
+
+    <div class="row my-3">
+        <div class="col d-flex flex-column align-items-start">
+            <a href="{{ path('registration') }}">{{ 'page_title.registration'|trans }}</a>
+            <a href="{{ path('login') }}">{{ 'page_title.login'|trans }}</a>
+            <a href="{{ path('password_reset_request') }}">{{ 'page_title.password_reset'|trans }}</a>
+        </div>
+    </div>
+{% endblock %}
