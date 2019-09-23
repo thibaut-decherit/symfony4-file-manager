@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  * @ORM\Table(name="large_image")eazea
  * @ORM\HasLifecycleCallbacks
  * @UniqueEntity(
- *     fields={"name", "path"}
+ *     fields={"name", "path"}eza
  * )
  */
 class LargeImage extends AbstractImageFile
