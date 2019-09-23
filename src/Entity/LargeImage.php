@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
  * @package App\Entity
  *
  * @ORM\Entity
- * @ORM\Table(name="large_image")
+ * @ORM\Table(name="large_image")eazea
  * @ORM\HasLifecycleCallbacks
  * @UniqueEntity(
  *     fields={"name", "path"}
