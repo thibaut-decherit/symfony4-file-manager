@@ -41,18 +41,25 @@ class FileChunk
     private $id;
 
     /**
+     * @var bool
+     */
+    private $isLastChunk;
+
+    /**
      * FileChunk constructor.
      * @param int $id
      * @param array $metadata
      * @param UploadedFile $file
+     * @param bool $isLastChunk
      */
-    public function __construct(int $id, array $metadata, UploadedFile $file)
+    public function __construct(int $id, array $metadata, UploadedFile $file, bool $isLastChunk)
     {
-        $this->name = $metadata['name'];
-        $this->fingerprint = $metadata['sha256'];
-        $this->size = $metadata['size'];
-        $this->type = $metadata['type'];
+        $this->name = (string)$metadata['name'];
+        $this->fingerprint = (string)$metadata['sha256'];
+        $this->size = (int)$metadata['size'];
+        $this->type = (string)$metadata['type'];
         $this->file = $file;
-        $this->id = $id;
+        $this->id = (int)$id;
+        $this->isLastChunk = (bool)$isLastChunk;
     }
 }

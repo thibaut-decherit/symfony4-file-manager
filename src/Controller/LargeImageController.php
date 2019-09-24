@@ -38,8 +38,12 @@ class LargeImageController extends DefaultController
     {
         $chunkNumber = $request->get('id');
         $metadata = (array)json_decode($request->get('metadata'));
-        $fileChunk = new FileChunk($chunkNumber, $metadata, $request->files->get('file'));
+        $isLastChunk = filter_var($request->get('isLastChunk'), FILTER_VALIDATE_BOOLEAN);
+
+        $fileChunk = new FileChunk($chunkNumber, $metadata, $request->files->get('file'), $isLastChunk);
+
         dump($fileChunk);
+
         return new JsonResponse();
     }
 }

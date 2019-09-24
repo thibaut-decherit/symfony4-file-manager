@@ -23,18 +23,26 @@ async function handleFileUpload(form) {
 
     let chunkCount = 0;
     for (let offset = 0; offset < METADATA.size; offset += CHUNK_SIZE) {
-        await uploadChunk(form, constructChunk(BLOB, METADATA, offset, CHUNK_SIZE, chunkCount));
+        const CHUNK = constructChunk(BLOB, METADATA, offset, CHUNK_SIZE, chunkCount);
+        let isLastChunk = false;
+
+        if (offset + CHUNK_SIZE >= METADATA.size) {
+            isLastChunk = true;
+        }
+
+        await uploadChunk(form, CHUNK, isLastChunk);
 
         chunkCount++;
     }
 }
 
-async function uploadChunk(form, chunk) {
+async function uploadChunk(form, chunk, isLastChunk) {
     let formData = new FormData();
 
     formData.append('id', chunk.id);
     formData.append('metadata', chunk.metadata);
     formData.append('file', chunk.file);
+    formData.append('isLastChunk', isLastChunk);
 
     await $.ajax({
         type: $(form).attr('method'),
