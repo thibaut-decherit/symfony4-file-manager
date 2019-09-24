@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -22,5 +23,18 @@ class LargeImageController extends DefaultController
     public function uploadView()
     {
         return $this->render('form/image_file/upload.html.twig');
+    }
+
+    /**
+     * Renders homepage.
+     *
+     * @param Request $request
+     * @Route("/upload-chunk-ajax", name="large_image_upload_chunk_ajax", methods="POST")
+     * @return Response
+     */
+    public function uploadChunk(Request $request)
+    {
+        dump($request);
+        return new Response();
     }
 }
