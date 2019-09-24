@@ -13,7 +13,10 @@
         </div>
     </div>
 
-    <form action="" method="post" id="ajax-form-login" class="col p-0 my-3">
+    <form
+            action="{{ path('large_image_upload_chunk_ajax') }}" method="post" id="ajax-form-large-file-upload"
+            class="col p-0 my-3"
+    >
         <div class="form-group">
             <input type="file" name="file" id="file">
         </div>

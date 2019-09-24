@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\FileChunk;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -30,11 +32,14 @@ class LargeImageController extends DefaultController
      *
      * @param Request $request
      * @Route("/upload-chunk-ajax", name="large_image_upload_chunk_ajax", methods="POST")
-     * @return Response
+     * @return JsonResponse
      */
     public function uploadChunk(Request $request)
     {
-        dump($request);
-        return new Response();
+        $chunkNumber = $request->get('id');
+        $metadata = (array)json_decode($request->get('metadata'));
+        $fileChunk = new FileChunk($chunkNumber, $metadata, $request->files->get('file'));
+        dump($fileChunk);
+        return new JsonResponse();
     }
 }
