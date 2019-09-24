@@ -1,0 +1,30 @@
+{% extends '_base.html.twig' %}
+
+{% set page_title = 'page_title.large_image_upload'|trans %}
+
+{% block body %}
+    <div class="row">
+        <h1 class="col">{{ 'page_title.large_image_upload'|trans }}</h1>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <a href="{{ path('home') }}">{{ 'page_title.home'|trans }}</a>
+        </div>
+    </div>
+
+    <form action="" method="post" id="ajax-form-login" class="col p-0 my-3">
+        <div class="form-group">
+            <input type="file" name="file" id="file">
+        </div>
+        <input
+                class="btn btn-primary border-0 btn-block rounded-0 text-white" type="submit" id="_submit"
+                name="_submit" value="Upload"
+        />
+    </form>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ encore_entry_script_tags('chunk-uploader') }}
+{% endblock %}

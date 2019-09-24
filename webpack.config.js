@@ -24,6 +24,7 @@ Encore
      Each file can optionally include a reference to a CSS file tied to the same page/feature.
      */
     .addEntry('account-information', './assets/js/components/user/account-information.js')
+    .addEntry('chunk-uploader', './assets/js/components/file/chunk-uploader.js')
     .addEntry('email-change', './assets/js/components/user/email-change.js')
     .addEntry('login', './assets/js/views/user/login.js')
     .addEntry('password-change', './assets/js/components/user/password-change.js')
