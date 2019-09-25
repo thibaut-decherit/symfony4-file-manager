@@ -24,6 +24,7 @@ parameters:
   app.email_change_token_lifetime: 3600 # seconds
   app.password_reset_request_send_email_again_delay: 120 # seconds
   app.password_reset_token_lifetime: 3600 # seconds
+  app.private_upload_directory: '%kernel.project_dir%/private-user-data/uploads'
   app.website_name: '%env(WEBSITE_NAME)%'
 
 services:
@@ -49,6 +50,10 @@ services:
 
   # add more service definitions when explicit configuration is needed
   # please note that last definitions always *replace* previous ones
+
+  App\Service\FileChunkUploaderService\FileChunkUploaderService:
+    arguments:
+      $privateUploadDirectory: '%app.private_upload_directory%'
 
   App\Service\MailerService:
     arguments:

@@ -16,7 +16,7 @@ async function handleFileUpload(form) {
 
     const METADATA = {
         name: BLOB.name,
-        sha256: Sha256(BLOB).toString(),
+        sha256: Sha256(BLOB).toString(), //TODO: Debug, doesn't handle checksum
         size: BLOB.size,
         type: BLOB.type,
     };
