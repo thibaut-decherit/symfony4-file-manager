@@ -1,22 +1,28 @@
-import Sha256 from 'crypto-js/sha256';
 import {body} from '../helpers/jquery/selectors';
+import {getFileFingerprint} from './fingerprint-generator';
 
 body.on('submit', '#ajax-form-large-file-upload', function (event) {
     event.preventDefault();
 
     const LARGE_FILE_UPLOAD_FORM = event.currentTarget;
 
-    handleFileUpload(LARGE_FILE_UPLOAD_FORM);
+    getFileFingerprint(
+        LARGE_FILE_UPLOAD_FORM.elements.file.files[0],
+        'SHA256',
+        progress => console.log("Progress: " + progress)
+    ).then(fingerprint => {
+        console.log(fingerprint);
+        handleFileUpload(LARGE_FILE_UPLOAD_FORM, fingerprint);
+    })
 });
 
-// Warning: For tests only, converting a very large file could result in large browser RAM consumption (TODO: Verify)
-async function handleFileUpload(form) {
-    const CHUNK_SIZE = 100000; // 100ko
+async function handleFileUpload(form, fingerprint) {
+    const CHUNK_SIZE = 2000000; // 2Mo
     const BLOB = form.elements.file.files[0];
 
     const METADATA = {
         name: BLOB.name,
-        sha256: Sha256(BLOB).toString(), //TODO: Debug, doesn't handle checksum
+        sha256: fingerprint,
         size: BLOB.size,
         type: BLOB.type,
     };
@@ -30,7 +36,7 @@ async function handleFileUpload(form) {
             isLastChunk = true;
         }
 
-        await uploadChunk(form, CHUNK, isLastChunk);
+        // await uploadChunk(form, CHUNK, isLastChunk);
 
         chunkCount++;
     }
