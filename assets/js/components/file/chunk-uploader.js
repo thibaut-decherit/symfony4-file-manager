@@ -1,20 +1,34 @@
 import {body} from '../helpers/jquery/selectors';
-import {getFileFingerprint} from './fingerprint-generator';
+import {getFileFingerprint} from './file-fingerprint-generator';
 
 body.on('submit', '#ajax-form-large-file-upload', function (event) {
     event.preventDefault();
 
     const LARGE_FILE_UPLOAD_FORM = event.currentTarget;
 
+    // First we get the fingerprint of the file, then we begin the upload.
     getFileFingerprint(
         LARGE_FILE_UPLOAD_FORM.elements.file.files[0],
         'SHA256',
-        progress => console.log("Progress: " + progress)
+        4,
+        progress => fingerprintProgressCallback(progress)
     ).then(fingerprint => {
         console.log(fingerprint);
         handleFileUpload(LARGE_FILE_UPLOAD_FORM, fingerprint);
+    }).catch(() => {
+        console.error('Could not process file to generate fingerprint');
     })
 });
+
+/**
+ * Called when fingerprint generator is done processing a chunk of the file.
+ * Will be called multiple times if file is larger than one chunk.
+ * @param progress
+ */
+function fingerprintProgressCallback(progress) {
+    progress = Math.floor(progress * 100);
+    console.log(`Pre-processing: ${progress}%`);
+}
 
 async function handleFileUpload(form, fingerprint) {
     const CHUNK_SIZE = 2000000; // 2Mo
@@ -36,7 +50,7 @@ async function handleFileUpload(form, fingerprint) {
             isLastChunk = true;
         }
 
-        // await uploadChunk(form, CHUNK, isLastChunk);
+        await uploadChunk(form, CHUNK, isLastChunk);
 
         chunkCount++;
     }
