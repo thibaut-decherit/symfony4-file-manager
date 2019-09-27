@@ -2,7 +2,7 @@
 
 namespace App\Service\FileChunkUploaderService;
 
-use App\Helper\StringHelper;
+use App\Helper\FilesystemHelper;
 use Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -96,6 +96,7 @@ class FileChunkUploaderService
      * @param string $entityClass
      * @param UserInterface $user
      * @return string|null
+     * @throws Exception
      */
     public function handleUpload(Request $request, string $entityClass, UserInterface $user): ?string
     {
@@ -113,6 +114,7 @@ class FileChunkUploaderService
      *
      * @param FileChunk $fileChunk
      * @return string
+     * @throws Exception
      */
     private function upload(FileChunk $fileChunk): string
     {
@@ -174,7 +176,7 @@ class FileChunkUploaderService
         $loop = true;
         $completeFilePath = '';
         while ($loop) {
-            $randomName = StringHelper::generateRandomString(256) . '.' . $lastFileChunk->getExtension();
+            $randomName = FilesystemHelper::getRandomFileName($lastFileChunk->getName());
             $completeFilePath = $this->getCompleteFileUploadDirectory($lastFileChunk) . '/' . $randomName;
 
             if (file_exists($completeFilePath) === false) {
@@ -184,7 +186,7 @@ class FileChunkUploaderService
 
         rename($completeFileChunkPath, $completeFilePath);
 
-        rmdir($this->getChunkUploadDirectory($lastFileChunk)); // TODO: delete file and folder instead just to be sure, create a filesystem helper if required (see https://stackoverflow.com/a/3349792/9847511)
+        FilesystemHelper::removeDirectoryAndContent($this->getChunkUploadDirectory($lastFileChunk));
 
         return $completeFilePath;
     }
@@ -208,9 +210,7 @@ class FileChunkUploaderService
      */
     private function handleCorruptedFile(FileChunk $lastFileChunk): void
     {
-        $completeFileChunkPath = $this->getChunkPath($lastFileChunk);
-
-        unlink($completeFileChunkPath); // TODO: delete file and folder instead, create a filesystem helper if required (see https://stackoverflow.com/a/3349792/9847511)
+        FilesystemHelper::removeDirectoryAndContent($this->getChunkUploadDirectory($lastFileChunk));
     }
 
     /**

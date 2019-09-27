@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\LargeImage;
 use App\Service\FileChunkUploaderService\FileChunkUploaderService;
+use Exception;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,6 +38,7 @@ class LargeImageController extends DefaultController
      * @param FileChunkUploaderService $fileChunkUploaderService
      * @Route("/upload-chunk-ajax", name="large_image_upload_chunk_ajax", methods="POST")
      * @return JsonResponse
+     * @throws Exception
      */
     public function uploadChunk(Request $request, FileChunkUploaderService $fileChunkUploaderService)
     {
