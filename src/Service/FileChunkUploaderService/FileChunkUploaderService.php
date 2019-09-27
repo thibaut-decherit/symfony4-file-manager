@@ -2,6 +2,8 @@
 
 namespace App\Service\FileChunkUploaderService;
 
+use App\Helper\StringHelper;
+use Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -158,6 +160,7 @@ class FileChunkUploaderService
      * @param FileChunk $lastFileChunk
      * @return string
      * The path of the complete file
+     * @throws Exception
      */
     private function moveCompleteFileToUploadDirectory(FileChunk $lastFileChunk): string
     {
@@ -166,9 +169,18 @@ class FileChunkUploaderService
         }
 
         $completeFileChunkPath = $this->getChunkPath($lastFileChunk);
-        $randomName = uniqid() . '.' . $lastFileChunk->getExtension(); // TODO: Generate really random name
 
-        $completeFilePath = $this->getCompleteFileUploadDirectory($lastFileChunk) . '/' . $randomName;
+        // Renames the file and makes sure another file with the same name does not already exists in the same directory.
+        $loop = true;
+        $completeFilePath = '';
+        while ($loop) {
+            $randomName = StringHelper::generateRandomString(256) . '.' . $lastFileChunk->getExtension();
+            $completeFilePath = $this->getCompleteFileUploadDirectory($lastFileChunk) . '/' . $randomName;
+
+            if (file_exists($completeFilePath) === false) {
+                $loop = false;
+            }
+        }
 
         rename($completeFileChunkPath, $completeFilePath);
 
