@@ -49,7 +49,7 @@ class FileChunkUploaderService
      * @param UserInterface $user
      * @return int|null
      */
-    public function getLastUploadedChunk(Request $request, string $entityClass, UserInterface $user): ?int
+    public function getLastUploadedChunkId(Request $request, string $entityClass, UserInterface $user): ?int
     {
         if ($this->isResumable($request, $entityClass, $user)) {
             $fileChunk = $this->buildChunk($request, $entityClass, $user);
@@ -67,7 +67,7 @@ class FileChunkUploaderService
      * @param UserInterface $user
      * @return FileChunk
      */
-    private function buildChunk(Request $request, string $entityClass, UserInterface $user): FileChunk
+    public function buildChunk(Request $request, string $entityClass, UserInterface $user): FileChunk
     {
         $chunkNumber = $request->get('id');
         $metadata = (array)json_decode($request->get('metadata'));
@@ -85,8 +85,10 @@ class FileChunkUploaderService
 
     /**
      * Handles upload of a file chunk.
-     * Returns file path if upload is complete (chunk was the last one required to complete the file).
-     * Otherwise returns null.
+     * Returns file path if upload is complete (chunk was the last one required to complete the file) without error.
+     * Returns 'chunk upload done' string if the chunk has been uploaded and processed successfully.
+     * Returns 'file corrupted' string if upload is complete but file fingerprint does not match fingerprint generated
+     * client-side.
      *
      * @param Request $request
      * @param string $entityClass
@@ -101,22 +103,29 @@ class FileChunkUploaderService
     }
 
     /**
-     * Handles write to disk operation then returns path of complete file if upload is complete.
-     * Otherwise returns null.
-     * Upload is considered complete if $fileChunk->isLastChunk() is true.
+     * Handles write to disk operations and fingerprint validation of complete files.
+     * Returns file path if upload is complete (chunk was the last one required to complete the file) without error.
+     * Returns 'chunk upload done' string if the chunk has been uploaded and processed successfully.
+     * Returns 'file corrupted' string if upload is complete but file fingerprint does not match fingerprint generated
+     * client-side.
      *
      * @param FileChunk $fileChunk
-     * @return string|null
+     * @return string
      */
-    private function upload(FileChunk $fileChunk): ?string
+    private function upload(FileChunk $fileChunk): string
     {
         $this->writeChunkToDisk($fileChunk);
 
         if ($fileChunk->isLastChunk() === false) {
-            return null;
+            return 'chunk upload done';
         }
 
-        return null; // TODO: temp
+        if ($this->validateFileFingerprint($fileChunk) === false) {
+            $this->handleCorruptedFile($fileChunk);
+
+            return 'file corrupted';
+        }
+
         return $this->moveCompleteFileToUploadDirectory($fileChunk);
     }
 
@@ -132,16 +141,14 @@ class FileChunkUploaderService
             mkdir($chunkUploadDirectoryPath, 0775, true);
         }
 
-        $currentChunkName = $this->getChunkName($fileChunk);
-
         if ($fileChunk->getId() === 0) {
             // First chunk so it is directly written to disk.
-            $fileChunk->getFile()->move($chunkUploadDirectoryPath, $currentChunkName);
+            $fileChunk->getFile()->move($chunkUploadDirectoryPath, $this->getChunkName($fileChunk));
         } else {
             // Current chunk is appended to the chunk already on disk
             $previousChunkPath = $this->getPreviousChunkPath($fileChunk);
             $currentChunkPath = $this->getChunkPath($fileChunk);
-            file_put_contents($previousChunkPath, $fileChunk->getFile(), FILE_APPEND); // TODO: debug, doesn't seem to write any data
+            file_put_contents($previousChunkPath, file_get_contents($fileChunk->getFile()), FILE_APPEND);
 
             rename($previousChunkPath, $currentChunkPath);
         }
@@ -150,6 +157,7 @@ class FileChunkUploaderService
     /**
      * @param FileChunk $lastFileChunk
      * @return string
+     * The path of the complete file
      */
     private function moveCompleteFileToUploadDirectory(FileChunk $lastFileChunk): string
     {
@@ -157,21 +165,46 @@ class FileChunkUploaderService
             mkdir($this->getCompleteFileUploadDirectory($lastFileChunk), 0775, true);
         }
 
-        // TODO: Check if sha256 fingerprint of file matches name of directory and fingerprint of $lastFileChunk->getFingerprint(), throw exception otherwise
+        $completeFileChunkPath = $this->getChunkPath($lastFileChunk);
+        $randomName = uniqid() . '.' . $lastFileChunk->getExtension(); // TODO: Generate really random name
 
-        // TODO: Move completed file to complete directory with
+        $completeFilePath = $this->getCompleteFileUploadDirectory($lastFileChunk) . '/' . $randomName;
 
-        // TODO: Remove chunks 'hash' folder of completed file (first TODO may be able to do that too thanks to file->move)
+        rename($completeFileChunkPath, $completeFilePath);
 
-        // TODO: Return path of moved complete file
+        rmdir($this->getChunkUploadDirectory($lastFileChunk)); // TODO: delete file and folder instead just to be sure, create a filesystem helper if required (see https://stackoverflow.com/a/3349792/9847511)
 
-        return 'pathToCompleteFile';
+        return $completeFilePath;
+    }
+
+    /**
+     * Warning: This will render the server unresponsive for multiple seconds if you hash a very large file (> 100Mo).
+     *
+     * @param FileChunk $lastFileChunk
+     * @return bool
+     */
+    private function validateFileFingerprint(FileChunk $lastFileChunk): bool
+    {
+        $completeFileChunkPath = $this->getChunkPath($lastFileChunk);
+
+        return hash_file('SHA256', $completeFileChunkPath) === $lastFileChunk->getFingerprint();
+    }
+
+    /**
+     * @param FileChunk $lastFileChunk
+     * @return void
+     */
+    private function handleCorruptedFile(FileChunk $lastFileChunk): void
+    {
+        $completeFileChunkPath = $this->getChunkPath($lastFileChunk);
+
+        unlink($completeFileChunkPath); // TODO: delete file and folder instead, create a filesystem helper if required (see https://stackoverflow.com/a/3349792/9847511)
     }
 
     /**
      * @return string
      */
-    public function getPrivateUploadDirectory(): string
+    private function getPrivateUploadDirectory(): string
     {
         return $this->privateUploadDirectory;
     }
@@ -222,7 +255,7 @@ class FileChunkUploaderService
         $entityClass = strtr($fileChunk->getEntityClass(), '\\', '-');
         $fingerprint = $fileChunk->getFingerprint();
 
-        return "$privateUploadDirectory/user-$userId/$entityClass/chunks/$fingerprint";
+        return "$privateUploadDirectory/user-$userId/$entityClass/partial/$fingerprint";
     }
 
     /**
@@ -235,6 +268,6 @@ class FileChunkUploaderService
         $userId = $lastFileChunk->getUser()->getId();
         $entityClass = strtr($lastFileChunk->getEntityClass(), '\\', '-');
 
-        return "$privateUploadDirectory/user-$userId/$entityClass";
+        return "$privateUploadDirectory/user-$userId/$entityClass/complete";
     }
 }

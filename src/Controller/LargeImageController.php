@@ -40,20 +40,36 @@ class LargeImageController extends DefaultController
      */
     public function uploadChunk(Request $request, FileChunkUploaderService $fileChunkUploaderService)
     {
-        $path = $fileChunkUploaderService->handleUpload(
+        $result = $fileChunkUploaderService->handleUpload(
             $request,
             LargeImage::class,
             $this->getUser()
         );
 
-//        if(is_string($path)) {
-//            $em = $this->getDoctrine()->getManager();
-//            $largeImage = new LargeImage();
-//
-//            $em->persist($largeImage);
-//            $em->flush();
-//        }
+        switch ($result) {
+            case 'chunk upload done':
+                return new JsonResponse('chunk upload success');
+                break;
+            case 'file corrupted':
+                return new JsonResponse('corrupted');
+                break;
+            default:
+                $filePath = $result;
 
-        return new JsonResponse();
+                $fileChunk = $fileChunkUploaderService->buildChunk(
+                    $request,
+                    LargeImage::class,
+                    $this->getUser()
+                );
+
+                // TODO: Hydrate LargeImage with data from $fileChunk
+//                $em = $this->getDoctrine()->getManager();
+//                $largeImage = new LargeImage();
+//
+//                $em->persist($largeImage);
+//                $em->flush();
+
+                return new JsonResponse('upload complete');
+        }
     }
 }

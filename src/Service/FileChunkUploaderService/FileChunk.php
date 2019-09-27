@@ -90,6 +90,14 @@ class FileChunk
     /**
      * @return string
      */
+    public function getExtension(): string
+    {
+        return array_reverse(explode('.', $this->getName()))[0];
+    }
+
+    /**
+     * @return string
+     */
     public function getName(): string
     {
         return $this->name;
