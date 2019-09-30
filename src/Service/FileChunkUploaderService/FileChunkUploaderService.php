@@ -140,8 +140,16 @@ class FileChunkUploaderService
     {
         $chunkUploadDirectoryPath = $this->getChunkUploadDirectory($fileChunk);
 
+        /*
+         * If this is the first chunk but the chunk upload directory already exists, directory is emptied to prevent
+         * potential conflict.
+         */
+        if(file_exists($chunkUploadDirectoryPath) && $fileChunk->getId() === 0) {
+            FilesystemHelper::emptyDirectory($chunkUploadDirectoryPath);
+        }
+
         // Creates directory and subdirectories if they don't exist yet.
-        if (!file_exists($chunkUploadDirectoryPath)) {
+        if (file_exists($chunkUploadDirectoryPath) === false) {
             mkdir($chunkUploadDirectoryPath, 0775, true);
         }
 
@@ -149,7 +157,10 @@ class FileChunkUploaderService
             // First chunk so it is directly written to disk.
             $fileChunk->getFile()->move($chunkUploadDirectoryPath, $this->getChunkName($fileChunk));
         } else {
-            // Current chunk is appended to the chunk already on disk
+            /*
+             * Current chunk is appended to the merged chunks file (named "merged-chunks-0-to-$fileChunk->getId())"
+             * already on disk.
+             */
             $previousChunkPath = $this->getPreviousChunkPath($fileChunk);
             $currentChunkPath = $this->getChunkPath($fileChunk);
             file_put_contents($previousChunkPath, file_get_contents($fileChunk->getFile()), FILE_APPEND);

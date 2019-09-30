@@ -14,6 +14,32 @@ use InvalidArgumentException;
 class FilesystemHelper
 {
     /**
+     * Deletes the content of a directory recursively, including sub-directories and their own content.
+     *
+     * @param string $directoryPath
+     */
+    public static function emptyDirectory(string $directoryPath): void
+    {
+        if (is_dir($directoryPath) === false) {
+            throw new InvalidArgumentException("$directoryPath is not a directory");
+        }
+
+        /*
+         * array_diff() removes current (.) and parent (..) directories which may be included in the array returned by
+         * scandir().
+         */
+        $items = array_diff(scandir($directoryPath), ['.', '..']);
+
+        foreach ($items as $item) {
+            if (is_dir("$directoryPath/$item")) {
+                FilesystemHelper::removeDirectoryAndContent("$directoryPath/$item");
+            } else {
+                unlink("$directoryPath/$item");
+            }
+        }
+    }
+
+    /**
      * Returns file extension.
      * Returns empty string if files does not have an extension.
      *
@@ -47,29 +73,16 @@ class FilesystemHelper
      * Deletes directory and it's content recursively, including sub-directories and their own content.
      *
      * @param string $directoryPath
-     * @return bool
      */
-    public static function removeDirectoryAndContent(string $directoryPath): bool
+    public static function removeDirectoryAndContent(string $directoryPath): void
     {
         if (is_dir($directoryPath) === false) {
             throw new InvalidArgumentException("$directoryPath is not a directory");
         }
 
-        /*
-         * array_diff() here removes current (.) and parent (..) directories which may be included in the array returned
-         * by scandir().
-         */
-        $items = array_diff(scandir($directoryPath), ['.', '..']);
+        FilesystemHelper::emptyDirectory($directoryPath);
 
-        foreach ($items as $item) {
-            if (is_dir("$directoryPath/$item")) {
-                FilesystemHelper::removeDirectoryAndContent("$directoryPath/$item");
-            } else {
-                unlink("$directoryPath/$item");
-            }
-        }
-
-        return rmdir($directoryPath);
+        rmdir($directoryPath);
     }
 
     /**
