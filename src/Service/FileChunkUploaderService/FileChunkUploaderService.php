@@ -69,7 +69,7 @@ class FileChunkUploaderService
      * @param UserInterface $user
      * @return FileChunk
      */
-    public function buildChunk(Request $request, string $entityClass, UserInterface $user): FileChunk
+    private function buildChunk(Request $request, string $entityClass, UserInterface $user): FileChunk
     {
         $chunkNumber = $request->get('id');
         $metadata = (array)json_decode($request->get('metadata'));
@@ -95,10 +95,10 @@ class FileChunkUploaderService
      * @param Request $request
      * @param string $entityClass
      * @param UserInterface $user
-     * @return string|null
+     * @return FileChunkUploaderResponse
      * @throws Exception
      */
-    public function handleUpload(Request $request, string $entityClass, UserInterface $user): ?string
+    public function handleUpload(Request $request, string $entityClass, UserInterface $user): FileChunkUploaderResponse
     {
         $fileChunk = $this->buildChunk($request, $entityClass, $user);
 
@@ -113,24 +113,38 @@ class FileChunkUploaderService
      * client-side.
      *
      * @param FileChunk $fileChunk
-     * @return string
+     * @return FileChunkUploaderResponse
      * @throws Exception
      */
-    private function upload(FileChunk $fileChunk): string
+    private function upload(FileChunk $fileChunk): FileChunkUploaderResponse
     {
         $this->writeChunkToDisk($fileChunk);
 
         if ($fileChunk->isLastChunk() === false) {
-            return 'chunk upload done';
+            return new FileChunkUploaderResponse(
+                FileChunkUploaderResponse::STATUS_CHUNK_UPLOAD_SUCCESS,
+                $fileChunk
+            );
         }
 
         if ($this->validateFileFingerprint($fileChunk) === false) {
             $this->handleCorruptedFile($fileChunk);
 
-            return 'file corrupted';
+            return new FileChunkUploaderResponse(
+                FileChunkUploaderResponse::STATUS_RESTART_UPLOAD,
+                $fileChunk
+            );
         }
 
-        return $this->moveCompleteFileToUploadDirectory($fileChunk);
+        $completeFilePath = $this->moveCompleteFileToUploadDirectory($fileChunk);
+
+        return new FileChunkUploaderResponse(
+            FileChunkUploaderResponse::STATUS_FILE_UPLOAD_SUCCESS,
+            $fileChunk,
+            [
+                'path' => $completeFilePath
+            ]
+        );
     }
 
     /**
@@ -144,7 +158,7 @@ class FileChunkUploaderService
          * If this is the first chunk but the chunk upload directory already exists, directory is emptied to prevent
          * potential conflict.
          */
-        if(file_exists($chunkUploadDirectoryPath) && $fileChunk->getId() === 0) {
+        if (file_exists($chunkUploadDirectoryPath) && $fileChunk->getId() === 0) {
             FilesystemHelper::emptyDirectory($chunkUploadDirectoryPath);
         }
 

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\LargeImage;
+use App\Service\FileChunkUploaderService\FileChunkUploaderResponse;
 use App\Service\FileChunkUploaderService\FileChunkUploaderService;
 use Exception;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -42,27 +43,26 @@ class LargeImageController extends DefaultController
      */
     public function uploadChunk(Request $request, FileChunkUploaderService $fileChunkUploaderService)
     {
-        $result = $fileChunkUploaderService->handleUpload(
+        $uploaderResponse = $fileChunkUploaderService->handleUpload(
             $request,
             LargeImage::class,
             $this->getUser()
         );
 
-        switch ($result) {
-            case 'chunk upload done':
+        switch ($uploaderResponse->getStatus()) {
+            case FileChunkUploaderResponse::STATUS_CHUNK_UPLOAD_SUCCESS:
                 return new JsonResponse('chunk upload success');
                 break;
-            case 'file corrupted':
-                return new JsonResponse('corrupted');
+            case FileChunkUploaderResponse::STATUS_RESTART_UPLOAD:
+                return new JsonResponse('restart upload');
                 break;
-            default:
-                $filePath = $result;
+            case FileChunkUploaderResponse::STATUS_FILE_TOO_LARGE:
+                return new JsonResponse('file too large');
+                break;
+            case FileChunkUploaderResponse::STATUS_FILE_UPLOAD_SUCCESS:
+                $filePath = $uploaderResponse->getPayload()['path'];
 
-                $fileChunk = $fileChunkUploaderService->buildChunk(
-                    $request,
-                    LargeImage::class,
-                    $this->getUser()
-                );
+                $fileChunk = $uploaderResponse->getFileChunk();
 
                 // TODO: Hydrate LargeImage with data from $fileChunk
 //                $em = $this->getDoctrine()->getManager();
@@ -71,7 +71,10 @@ class LargeImageController extends DefaultController
 //                $em->persist($largeImage);
 //                $em->flush();
 
-                return new JsonResponse('upload complete');
+                return new JsonResponse('file upload success');
+                break;
+            default:
+                throw new Exception('Unhandled switch case');
         }
     }
 }
